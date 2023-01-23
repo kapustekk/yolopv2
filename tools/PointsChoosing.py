@@ -56,6 +56,7 @@ def camera_calibration(imgpath,txtpath):
                 CHOSEN_POINTS_COUNTER=CHOSEN_POINTS_COUNTER+1
         return CHOSEN_POINTS
     image = cv2.imread(imgpath)
+    #image = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_AREA)
     print(CHOSEN_POINTS)
 
     cv2.imshow("Camera calibrator", image)

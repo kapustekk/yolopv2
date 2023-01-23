@@ -51,12 +51,12 @@ def position_on_road(img_det, road_middle, left_line, right_line, x_conv, y_conv
                         1, [0, 0, 255], thickness=2
                         )
         elif real_polozenie[0] > 0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy", (300, 30),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy", (300, 30),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
         elif real_polozenie[0] < -0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy ", (300, 30),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy ", (300, 30),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
@@ -496,6 +496,7 @@ def detect(calibration_points):
             p, s, img_det, frame = path, '', im0s, getattr(dataset, 'frame', 0)
 
             h, w, _ = img_det.shape
+            #print(img_det.shape)
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
@@ -605,7 +606,7 @@ def detect(calibration_points):
                     # birds_img = warp_image_to_birdseye_view(img_det_copy, M)
                     # odleglosc od samochodu
                     set_of_found_cars.append(found_cars_points)
-                    unique_cars_long = label_cars(set_of_found_cars, h, 15)
+                    unique_cars_long = label_cars(set_of_found_cars, h, 5)
                     unique_cars_5 = label_cars(set_of_found_cars, h,
                                                5)  # zrobic sredni punkt samochodu z 5 klatek i porownwyac w danej klatce i kolejnej do predkosci
                     average_cars_points = average_points(unique_cars_5, -6, -1)
@@ -630,7 +631,10 @@ def detect(calibration_points):
                             cv2.putText(img_det, (str(round(speed_towards_car, 1)) + "km/h"), (point[0] - 30, point[1] + 20),
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         font_size, [125, 246, 55], thickness=1)
-                            if abs(real_dist[0]) < 0.75 and speed_towards_car>2*real_dist[1]: #real_dist[1] < 15 and speed_towards_car > 30:
+                            print(real_dist)
+                            print(diagonal_distnace)
+                            print(speed_towards_car)
+                            if abs(real_dist[0]) < 2 and speed_towards_car>diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
                                 cv2.putText(img_det, ("!!!" + str(round(diagonal_distnace, 1)) + "m!!!"),
                                             (point[0] - 30, point[1]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                             font_size, [0, 0, 255], thickness=2)
@@ -683,7 +687,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/vid2'
+    test_path = 'inference/hamowanie'
     calibration_points = []
     calibrate = 1
     approximation = 1
