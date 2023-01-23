@@ -65,22 +65,31 @@ def position_on_road(img_det,road_middle,left_line,right_line,x_conv,y_conv,M):
                         cv2.FONT_HERSHEY_DUPLEX,
                         1, [125, 246, 55], thickness=2)
 
-def estimate_speed_towards_car(vehicle_front, unique_cars_10, x_conv,y_conv, M, fps=30):
+def estimate_speed_towards_car(unique_cars, x_conv,y_conv, M, fps=30):
     unique_cars_speed = []
-    if len(unique_cars_10)>0:
-        vehicle_front = warp_point(vehicle_front,M)
-        unique_cars1=average_points(unique_cars_10, -30, -16)
-        unique_cars2=average_points(unique_cars_10, -15, -1)
-        time_between_points = 15 / fps
-        if len(unique_cars1)==len(unique_cars2):
-            for car1, car2 in zip(unique_cars1,unique_cars2):
-                px_dist1 = calculate_distance_between_points(warp_point(car1,M),vehicle_front)
-                px_dist2 = calculate_distance_between_points(warp_point(car2,M),vehicle_front)
-                real_dist1 = estimate_real_distance(px_dist1,x_conv,y_conv)
-                real_dist2 = estimate_real_distance(px_dist2,x_conv,y_conv)
-                speed = (real_dist1[1]-real_dist2[1])/time_between_points
-                unique_cars_speed.append(speed)
+    if len(unique_cars)>0:
+        time_between_points = 1/fps
+        for car in unique_cars:
+            distance_sum = 0
+            distance_list=[]
+            previous_point = (-1,-1)
+            for point in car:
+                if previous_point[0]!=-1:
+                    px_dist = calculate_distance_between_points(warp_point(previous_point, M), warp_point(point, M))
+                    real_dist = estimate_real_distance(px_dist, x_conv, y_conv)
+                    #diagonal_distance = math.sqrt((real_dist[0]**2)+(real_dist[1]**2))
+                    distance_list.append(real_dist[1])
+                previous_point = point
+            i=0
+            for distance in distance_list:
+                if abs(distance) <2:
+                    distance_sum = distance_sum + distance
+                    i = i+1
+            time = i*time_between_points
+            avg_speed = distance_sum/time
+            unique_cars_speed.append(avg_speed)
     return unique_cars_speed
+
 
 def average_points(unique_cars,start_point,end_point):
     unique_cars_average = []
