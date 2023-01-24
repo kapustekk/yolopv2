@@ -458,7 +458,7 @@ def detect(calibration_points):
     fleft2, fright2 = width*2, 0
     #add end
 
-    frame_counter = 0
+    #frame_counter = 0
     # Run inference
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
@@ -647,15 +647,14 @@ def detect(calibration_points):
                                         font_size, [125, 246, 55], thickness=1)
                         i = i + 1
 
-            frame_counter = frame_counter+1
+            #frame_counter = frame_counter+1
+            #show_seg_result(im0, (da_seg_mask,ll_seg_mask), is_demo=True)
+            #cv2.putText(img_det, str(round(frame_counter/30, 2)) + "s", (50, 200),
+            #            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+            #            1, [0, 0, 255], thickness=2)
+            # Save results (image with detections)
             # Print time (inference)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
-            #show_seg_result(im0, (da_seg_mask,ll_seg_mask), is_demo=True)
-
-            cv2.putText(img_det, str(round(frame_counter/30, 2)) + "s", (50, 200),
-                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                        1, [0, 0, 255], thickness=2)
-            # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, img_det)
@@ -695,7 +694,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/hamowanie_hit'
+    test_path = 'inference/test1'
     calibration_points = []
     calibrate = 1
     approximation = 1
