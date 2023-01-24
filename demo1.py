@@ -46,22 +46,22 @@ def position_on_road(img_det, road_middle, left_line, right_line, x_conv, y_conv
         real_szerokosc = estimate_real_distance(dist_szerokosc_pasa, x_conv, y_conv)
 
         if real_szerokosc[0] < 2 or real_szerokosc[0] > 4:
-            cv2.putText(img_det, "Bledny odczyt linii!!!", (300, 30),
+            cv2.putText(img_det, "Bledny odczyt linii!!!", (50, 100),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2
                         )
         elif real_polozenie[0] > 0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy", (300, 30),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy", (50, 100),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
         elif real_polozenie[0] < -0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy ", (300, 30),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy ", (50, 100),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
         else:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka", (300, 30),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka", (50, 100),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
@@ -457,8 +457,8 @@ def detect(calibration_points):
     fleft1, fright1 = width*2, 0
     fleft2, fright2 = width*2, 0
     #add end
-    
-    
+
+    frame_counter = 0
     # Run inference
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
@@ -487,9 +487,8 @@ def detect(calibration_points):
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t4 = time_synchronized()
 
-        da_seg_mask = driving_area_mask(seg)
+        #da_seg_mask = driving_area_mask(seg)
         ll_seg_mask = lane_line_mask(ll)
-
         # Process detections
         for i, det in enumerate(pred):  # detections per image
           
@@ -571,8 +570,10 @@ def detect(calibration_points):
                 img_det = display_from_set(img_det, set_of_lines_left, ll_seg_mask)
                 img_det = display_from_set(img_det, set_of_lines_right, ll_seg_mask)
 
+            position_on_road(img_det, optic_middle_bottom, left_line, right_line, x_conv, y_conv,
+                             M)  # polozenie na pasie
+
             #im0 = im0.astype(np.uint8)
-            found_cars_width = []
             found_cars_points = []
             if len(det):
                 # Rescale boxes from img_size to im0 size
@@ -606,14 +607,11 @@ def detect(calibration_points):
                     # birds_img = warp_image_to_birdseye_view(img_det_copy, M)
                     # odleglosc od samochodu
                     set_of_found_cars.append(found_cars_points)
-                    unique_cars_long = label_cars(set_of_found_cars, h, 5)
+                    unique_cars_long = label_cars(set_of_found_cars, h, 15)
                     unique_cars_5 = label_cars(set_of_found_cars, h,
                                                5)  # zrobic sredni punkt samochodu z 5 klatek i porownwyac w danej klatce i kolejnej do predkosci
                     average_cars_points = average_points(unique_cars_5, -6, -1)
                     estimated_speed_list = estimate_speed_towards_car(unique_cars_long, x_conv, y_conv, M)
-
-                    position_on_road(img_det, optic_middle_bottom, left_line, right_line, x_conv, y_conv,
-                                     M)  # polozenie na pasie
 
                     i = 0
                     for point in average_cars_points:
@@ -631,23 +629,32 @@ def detect(calibration_points):
                             cv2.putText(img_det, (str(round(speed_towards_car, 1)) + "km/h"), (point[0] - 30, point[1] + 20),
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         font_size, [125, 246, 55], thickness=1)
-                            print(real_dist)
-                            print(diagonal_distnace)
-                            print(speed_towards_car)
-                            if abs(real_dist[0]) < 2 and speed_towards_car>diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
+
+                            if abs(real_dist[0]) < 2 and speed_towards_car>1.5*diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
                                 cv2.putText(img_det, ("!!!" + str(round(diagonal_distnace, 1)) + "m!!!"),
                                             (point[0] - 30, point[1]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                             font_size, [0, 0, 255], thickness=2)
+
+
+                                cv2.putText(img_det, "HAMUJ!!!", (50, 150),
+                                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                            1, [0, 0, 255], thickness=2
+                                            )
                                 distance_written = True
                         if distance_written == False:
                             cv2.putText(img_det, (str(round(diagonal_distnace, 1)) + "m"), (point[0] - 30, point[1]),
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         font_size, [125, 246, 55], thickness=1)
                         i = i + 1
+
+            frame_counter = frame_counter+1
             # Print time (inference)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
             #show_seg_result(im0, (da_seg_mask,ll_seg_mask), is_demo=True)
 
+            cv2.putText(img_det, str(round(frame_counter/30, 2)) + "s", (50, 200),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [0, 0, 255], thickness=2)
             # Save results (image with detections)
             if save_img:
                 if dataset.mode == 'image':
@@ -678,6 +685,7 @@ def detect(calibration_points):
                     cv2.imshow("lanes", img_det)
                     cv2.waitKey(1)
 
+
     inf_time.update(t2-t1,img.size(0))
     nms_time.update(t4-t3,img.size(0))
     waste_time.update(tw2-tw1,img.size(0))
@@ -687,7 +695,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/hamowanie'
+    test_path = 'inference/hamowanie_hit'
     calibration_points = []
     calibrate = 1
     approximation = 1
