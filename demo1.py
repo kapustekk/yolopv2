@@ -7,6 +7,11 @@ import math
 import numpy as np
 import keyboard
 import sys
+from Kierowca.database import *
+from Kierowca import main_without_holistic as kierowca_main
+#from Kierowca import kierowca_main
+from Kierowca.face import FaceAnalysing
+from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
 from tools.ImageWrapping import warp_image_to_birdseye_view, warp_point, get_warp_perspective, calculate_distance_between_points, estimate_real_distance
 
@@ -393,6 +398,10 @@ def make_parser(test_path):
 
 
 def detect(calibration_points):
+
+    face_analyzer = FaceAnalysing()
+    pose_analyzer = PoseAnalysing()
+    camera = cv2.VideoCapture(0)
     # setting and directories
     source, weights,  save_txt, imgsz = opt.source, opt.weights,  opt.save_txt, opt.img_size
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
@@ -464,6 +473,7 @@ def detect(calibration_points):
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
     for path, img, im0s, vid_cap in dataset:
+        frame_start_time = time.time()
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -491,9 +501,9 @@ def detect(calibration_points):
         ll_seg_mask = lane_line_mask(ll)
         # Process detections
         for i, det in enumerate(pred):  # detections per image
-          
             p, s, img_det, frame = path, '', im0s, getattr(dataset, 'frame', 0)
 
+            img_det_copy = img_det.copy()
             h, w, _ = img_det.shape
             #print(img_det.shape)
             p = Path(p)  # to Path
@@ -570,9 +580,11 @@ def detect(calibration_points):
                 img_det = display_from_set(img_det, set_of_lines_left, ll_seg_mask)
                 img_det = display_from_set(img_det, set_of_lines_right, ll_seg_mask)
 
-            position_on_road(img_det, optic_middle_bottom, left_line, right_line, x_conv, y_conv,
-                             M)  # polozenie na pasie
 
+
+            if len(calibration_points) > 0:
+                position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
+                                 M)  # polozenie na pasie
             #im0 = im0.astype(np.uint8)
             found_cars_points = []
             if len(det):
@@ -604,8 +616,31 @@ def detect(calibration_points):
                         plot_one_box(xyxy, img_det, line_thickness=3)
 
                 if len(calibration_points) > 0:
-                    # birds_img = warp_image_to_birdseye_view(img_det_copy, M)
+                    birds_img = warp_image_to_birdseye_view(img_det_copy, M)
+                    cv2.circle(birds_img, warp_point(vehicle_front, M), 2, [0, 0, 255], 5)
+
+                    position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
+                                     M)  # polozenie na pasie
                     # odleglosc od samochodu
+                    '''
+                    for point in found_cars_points:
+                        point = warp_point(point,M)
+                        cv2.circle(birds_img, point, 2, [0, 0, 255], 5)
+                        cv2.line(birds_img, point, warp_point(vehicle_front, M), [0, 155, 155], 1)
+                        px_distance = calculate_distance_between_points(warp_point(vehicle_front, M),point)
+                        real_dist = estimate_real_distance(px_distance, x_conv, y_conv)
+                        diagonal_distnace = math.sqrt((real_dist[0] ** 2) + (real_dist[1] ** 2))
+                        real_dist_round = (round(real_dist[0],1),round(real_dist[1],1))
+                        cv2.putText(birds_img, str(px_distance)+ "px", (point[0] - 30, point[1]-30),
+                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    1, [125, 246, 55], thickness=1)
+                        cv2.putText(birds_img, " x ,    y", (point[0] - 30, point[1] - 50),
+                                                   cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                                   1, [125, 246, 55], thickness=1)
+                        cv2.putText(birds_img, str(real_dist_round)+ "m", (point[0] - 30, point[1]-10),
+                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    1, [125, 246, 55], thickness=1)
+                    '''
                     set_of_found_cars.append(found_cars_points)
                     unique_cars_long = label_cars(set_of_found_cars, h, 15)
                     unique_cars_5 = label_cars(set_of_found_cars, h,
@@ -616,7 +651,6 @@ def detect(calibration_points):
                     i = 0
                     for point in average_cars_points:
                         font_size = 1
-                        # cv2.circle(birds_img, warp_point(point, M), 2, [0, 0, 255], 5)
                         px_distance = calculate_distance_between_points(warp_point(point, M),
                                                                         warp_point(vehicle_front, M))
                         real_dist = estimate_real_distance(px_distance, x_conv, y_conv)
@@ -630,7 +664,7 @@ def detect(calibration_points):
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         font_size, [125, 246, 55], thickness=1)
 
-                            if abs(real_dist[0]) < 2 and speed_towards_car>1.5*diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
+                            if abs(real_dist[0]) < 1.5 and speed_towards_car>1.5*diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
                                 cv2.putText(img_det, ("!!!" + str(round(diagonal_distnace, 1)) + "m!!!"),
                                             (point[0] - 30, point[1]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                             font_size, [0, 0, 255], thickness=2)
@@ -681,8 +715,23 @@ def detect(calibration_points):
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_det)
 
-                    cv2.imshow("lanes", img_det)
-                    cv2.waitKey(1)
+                '''
+                ret, frame = camera.read()
+                key_input = cv2.waitKey(1)
+                kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
+
+                '''
+
+                dt = time.time()-frame_start_time
+                fps = 1/dt
+                cv2.putText(img_det, (str(round(fps, 1)) + "fps"), (width - 100, 30),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            1, [125, 246, 55], thickness=1)
+                #print(fps)
+                cv2.imshow("lanes", img_det)
+                cv2.waitKey(1)
+                #cv2.imshow("lanes", birds_img )
+                #cv2.waitKey(1)
 
 
     inf_time.update(t2-t1,img.size(0))
@@ -694,9 +743,9 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/test1'
+    test_path = 'inference/vid2'
     calibration_points = []
-    calibrate = 1
+    calibrate = 0
     approximation = 1
     if calibrate == 1:
         calibration_points = camera_calibration(test_path+"/calibration.png", test_path+"/calibration.txt")
