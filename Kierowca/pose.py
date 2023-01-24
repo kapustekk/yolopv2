@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 
-import utils
+from Kierowca import utils
 from Kierowca.base import MediaPipeAnalysing
 from Kierowca.database import Indices, Factors, Outcomes
 

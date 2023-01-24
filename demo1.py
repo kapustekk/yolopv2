@@ -8,8 +8,8 @@ import numpy as np
 import keyboard
 import sys
 from Kierowca.database import *
-from Kierowca import main_without_holistic as kierowca_main
-#from Kierowca import kierowca_main
+#from Kierowca import main_without_holistic as kierowca_main
+from Kierowca import kierowca_main
 from Kierowca.face import FaceAnalysing
 from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
@@ -25,6 +25,8 @@ from utils.utils import \
 
 
 def position_on_road(img_det, road_middle, left_line, right_line, x_conv, y_conv, M):
+    ZMIANA_PASA_PRAWY=False
+    ZMIANA_PASA_LEWY=False
     vehicle_front = road_middle
     cv2.circle(img_det, vehicle_front, 2, [0, 0, 255], 3)
     left_line_first_x = -1
@@ -50,27 +52,30 @@ def position_on_road(img_det, road_middle, left_line, right_line, x_conv, y_conv
         real_polozenie = estimate_real_distance(dist_polozenie, x_conv, y_conv)
         real_szerokosc = estimate_real_distance(dist_szerokosc_pasa, x_conv, y_conv)
 
-        if real_szerokosc[0] < 2 or real_szerokosc[0] > 4:
-            cv2.putText(img_det, "Bledny odczyt linii!!!", (50, 100),
+
+        if real_szerokosc[0] < 2.2 or real_szerokosc[0] > 6:
+            cv2.putText(img_det, "Bledny odczyt linii!!!", (50, 150),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2
                         )
         elif real_polozenie[0] > 0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy", (50, 100),
+            ZMIANA_PASA_PRAWY = True
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na prawy", (50, 150),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
         elif real_polozenie[0] < -0.8:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy ", (50, 100),
+            ZMIANA_PASA_LEWY = True
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka, zmiana pasa na lewy ", (50, 150),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
         else:
-            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka", (50, 100),
+            cv2.putText(img_det, str(round(real_polozenie[0], 2)) + "m od srodka", (50, 150),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [0, 0, 255], thickness=2)
 
-
+    return ZMIANA_PASA_LEWY,ZMIANA_PASA_PRAWY
 def estimate_speed_towards_car(unique_cars, x_conv,y_conv, M, fps=30):
     unique_cars_speed = []
     if len(unique_cars)>0:
@@ -398,6 +403,9 @@ def make_parser(test_path):
 
 
 def detect(calibration_points):
+    TELEFON_COUNTER = 0
+    SPANKO_COUNTER = 0  # Hasta La Vista
+    PATRZENIE_W_DOL_COUNTER = 0
 
     face_analyzer = FaceAnalysing()
     pose_analyzer = PoseAnalysing()
@@ -501,6 +509,9 @@ def detect(calibration_points):
         ll_seg_mask = lane_line_mask(ll)
         # Process detections
         for i, det in enumerate(pred):  # detections per image
+            ZMIANA_PASA_LEWY=False
+            ZMIANA_PASA_PRAWY=False
+            NIEBEZPIECZNE_ZBLIZANIE=False
             p, s, img_det, frame = path, '', im0s, getattr(dataset, 'frame', 0)
 
             img_det_copy = img_det.copy()
@@ -583,7 +594,7 @@ def detect(calibration_points):
 
 
             if len(calibration_points) > 0:
-                position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
+                ZMIANA_PASA_LEWY,ZMIANA_PASA_PRAWY = position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
                                  M)  # polozenie na pasie
             #im0 = im0.astype(np.uint8)
             found_cars_points = []
@@ -664,16 +675,15 @@ def detect(calibration_points):
                                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                         font_size, [125, 246, 55], thickness=1)
 
-                            if abs(real_dist[0]) < 1.5 and speed_towards_car>1.5*diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
+                            if abs(real_dist[0]) < 1.5 and speed_towards_car>2*diagonal_distnace: #real_dist[1] < 15 and speed_towards_car > 30:
+                                NIEBEZPIECZNE_ZBLIZANIE=True
                                 cv2.putText(img_det, ("!!!" + str(round(diagonal_distnace, 1)) + "m!!!"),
                                             (point[0] - 30, point[1]), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                             font_size, [0, 0, 255], thickness=2)
-
-
                                 cv2.putText(img_det, "HAMUJ!!!", (50, 150),
                                             cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                            1, [0, 0, 255], thickness=2
-                                            )
+                                            1, [0, 0, 255], thickness=2)
+                                NIEBEZPIECZNE_ZBLIZANIE = True
                                 distance_written = True
                         if distance_written == False:
                             cv2.putText(img_det, (str(round(diagonal_distnace, 1)) + "m"), (point[0] - 30, point[1]),
@@ -715,16 +725,58 @@ def detect(calibration_points):
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_det)
 
-                '''
+
                 ret, frame = camera.read()
                 key_input = cv2.waitKey(1)
                 kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
+                if Outcomes.ARE_EYES_CLOSED:
+                    SPANKO_COUNTER=SPANKO_COUNTER+1
+                    cv2.putText(img_det, "eyes closed", (30, 300),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            1, [125, 246, 55], thickness=1)
+                else:
+                    SPANKO_COUNTER=0
+                if SPANKO_COUNTER>3:
+                    cv2.putText(img_det, "!!!SPANKO ALARM!!!", (300, 30),
+                                cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                2, [0, 0, 255], thickness=2)
+                if Outcomes.HEAD_POSITION == "Down":
+                    cv2.putText(img_det, "PATRZ W GORE!", (300, 50),
+                                cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                1, [0, 0, 255], thickness=2)
+                if Outcomes.ARE_HANDS_CLOSE:
+                    TELEFON_COUNTER = TELEFON_COUNTER+1
+                else:
+                    TELEFON_COUNTER = 0
+                if TELEFON_COUNTER >5:
+                        cv2.putText(img_det, "ODLOZ TELEFON!", (300, 100),
+                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    1, [0,0, 255], thickness=1)
 
-                '''
+                if ZMIANA_PASA_PRAWY:
+                    if Outcomes.HEAD_POSITION == "Left" or Outcomes.LOOKING_DIRECTION =="Left":
+                        cv2.putText(img_det, "PATRZ W PRAWO!", (300, 50),
+                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    1, [0,0, 255], thickness=1)
+
+                if ZMIANA_PASA_LEWY:
+                    if Outcomes.HEAD_POSITION == "Right" or Outcomes.LOOKING_DIRECTION =="Right":
+                        cv2.putText(img_det, "PATRZ W LEWO!", (300, 50),
+                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    1, [0,0, 255], thickness=1)
+
+                cv2.putText(img_det, ("Facing " + str( Outcomes.HEAD_POSITION)), (30, 400),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            1, [125, 246, 55], thickness=1)
+
+                cv2.putText(img_det, (str("looking " + Outcomes.LOOKING_DIRECTION)), (30, 350),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            1, [125, 246, 55], thickness=1)
+
 
                 dt = time.time()-frame_start_time
-                fps = 1/dt
-                cv2.putText(img_det, (str(round(fps, 1)) + "fps"), (width - 100, 30),
+                fraps = 1/dt
+                cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL,
                             1, [125, 246, 55], thickness=1)
                 #print(fps)
@@ -743,9 +795,9 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/vid2'
+    test_path = 'inference/s7'
     calibration_points = []
-    calibrate = 0
+    calibrate = 1
     approximation = 1
     if calibrate == 1:
         calibration_points = camera_calibration(test_path+"/calibration.png", test_path+"/calibration.txt")

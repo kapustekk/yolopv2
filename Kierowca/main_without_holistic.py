@@ -41,6 +41,7 @@ def main(ret,frame,pose_analyzer,face_analyzer,inp):
     start_time = time.time()
     frame_counter = 1
     i = 0
+    #frame = cv2.flip(frame,1)
 
     #pose_analyzer = PoseAnalysing()
     # output = cv2.VideoWriter(“path”, cv2.VideoWriter_fourcc(*’MPEG’), 30, (1080, 1920))

@@ -3,7 +3,7 @@ import time
 import cv2
 import imutils
 import sys
-import utils
+from Kierowca import utils
 from Kierowca.database import Factors, Outcomes, KEYS
 from Kierowca.face import FaceAnalysing
 from Kierowca.pose import PoseAnalysing
@@ -32,7 +32,7 @@ def main(ret,frame,pose_analyzer,face_analyzer,inp):
 
     frame_counter += 1
 
-    frame = cv2.flip(frame,1)
+    #frame = cv2.flip(frame,1)
     if ret:
         frame = imutils.resize(frame, width=720)
 

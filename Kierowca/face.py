@@ -224,14 +224,14 @@ class FaceAnalysing(MediaPipeAnalysing):
         dir_threshold = Factors.HEAD_DIRECTION_THRESHOLD
 
         # See where the user's head tilting
-        if self.head_angles[1] < -dir_threshold:
-            direction = "Facing Left"
-        elif self.head_angles[1] > dir_threshold:
-            direction = "Facing Right"
+        if self.head_angles[1] > dir_threshold:
+            direction = "Left"
+        elif self.head_angles[1] < -dir_threshold:
+            direction = "Right"
         elif self.head_angles[0] < -dir_threshold:
-            direction = "Facing Down"
+            direction = "Down"
         elif self.head_angles[0] > dir_threshold:
-            direction = "Facing Up"
+            direction = "Up"
         else:
             direction = "Forward"
 

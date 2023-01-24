@@ -62,7 +62,7 @@ class MediaPipeAnalysing:
     #@staticmethod
     def get_average_3d_point(self, indices, coords):
         x, y, z = 0, 0, 0
-        print(type(coords[0]))
+        #print(type(coords[0]))
         for point in indices:
             #print(point)
             x += coords[point][0]
