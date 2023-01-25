@@ -124,5 +124,7 @@ KEYS = {
     # 100: "Factors.SET_THRESHOLD_DOWN = True",  # d DOWN
     # 108: "Factors.SET_THRESHOLD_LEFT = True",  # l LEFT
     # 114: "Factors.SET_THRESHOLD_RIGHT = True",  # r RIGHT
-    27: "sys.exit()"  # key 'esc'
+    27: "sys.exit()",  # key 'esc'
+    115: "write_thresholds_2file()", # key 's'
+
 }

@@ -406,7 +406,7 @@ def detect(calibration_points):
     TELEFON_COUNTER = 0
     SPANKO_COUNTER = 0  # Hasta La Vista
     PATRZENIE_W_DOL_COUNTER = 0
-
+    kierowca_main.read_thresholds_from_file()
     face_analyzer = FaceAnalysing()
     pose_analyzer = PoseAnalysing()
     camera = cv2.VideoCapture(0)

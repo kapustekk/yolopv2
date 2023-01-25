@@ -3,12 +3,51 @@ import sys
 
 import cv2
 import imutils
-
+from pathlib import Path
 from Kierowca import utils
 from Kierowca.database import Factors, Outcomes, KEYS
-from Kierowca.face import FaceAnalysing
-from Kierowca.pose import PoseAnalysing
 
+
+def write_thresholds_2file():
+    f = open("Kierowca/thresholds.txt", "w")
+    factors = [str(Factors.EYES_RATIO_FACTOR), str(Factors.LIPS_RATIO_FACTOR), str(Factors.HAND_FACE_DISTANCE_FACTOR),
+               str(Factors.PUPIL_LEFT_THRESHOLD), str(Factors.PUPIL_RIGHT_THRESHOLD), str(Factors.PUPIL_UP_THRESHOLD),
+               str(Factors.PUPIL_DOWN_THRESHOLD),
+               str(Factors.HEAD_LEFT_THRESHOLD), str(Factors.HEAD_RIGHT_THRESHOLD), str(Factors.HEAD_UP_THRESHOLD),
+               str(Factors.HEAD_DOWN_THRESHOLD)]
+    for line in factors:
+        f.write(line)
+        f.write("\n")
+    f.close()
+
+
+def read_thresholds_from_file():
+
+    path_to_file = "Kierowca/thresholds.txt"
+
+    path = Path(path_to_file)
+
+    if path.is_file():
+        f = open(path_to_file, "r")
+        new_factors = []
+        for line in f:
+            new_factor = line.strip("\n")
+            new_factors.append([new_factor])
+        print(len(new_factors))
+        Factors.EYES_RATIO_FACTOR = float(new_factors[0][0])
+        Factors.LIPS_RATIO_FACTOR = float(new_factors[1][0])
+        Factors.HAND_FACE_DISTANCE_FACTOR = float(new_factors[2][0])
+
+        Factors.PUPIL_LEFT_THRESHOLD = float(new_factors[3][0])
+        Factors.PUPIL_RIGHT_THRESHOLD = float(new_factors[4][0])
+        Factors.PUPIL_UP_THRESHOLD = float(new_factors[5][0])
+        Factors.PUPIL_DOWN_THRESHOLD = float(new_factors[6][0])
+
+        Factors.HEAD_LEFT_THRESHOLD = float(new_factors[7][0])
+        Factors.HEAD_RIGHT_THRESHOLD = float(new_factors[8][0])
+        Factors.HEAD_UP_THRESHOLD = float(new_factors[9][0])
+        Factors.HEAD_DOWN_THRESHOLD = float(new_factors[10][0])
+        f.close()
 
 def configure_factors(frame):
     frame_height, frame_width = frame.shape[:2]
