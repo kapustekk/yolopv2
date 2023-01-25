@@ -9,7 +9,7 @@ import keyboard
 import sys
 from Kierowca.database import *
 #from Kierowca import main_without_holistic as kierowca_main
-from Kierowca import kierowca_main
+from Kierowca import main as kierowca_main
 from Kierowca.face import FaceAnalysing
 from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
@@ -617,6 +617,7 @@ def detect(calibration_points):
                     bottom_middle_point = (mid_x, bottom_y)
                     found_cars_points.append(bottom_middle_point)
                     #add end
+                    '''
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
@@ -625,7 +626,7 @@ def detect(calibration_points):
 
                     if save_img :  # Add bbox to image
                         plot_one_box(xyxy, img_det, line_thickness=3)
-
+                    '''
                 if len(calibration_points) > 0:
                     birds_img = warp_image_to_birdseye_view(img_det_copy, M)
                     cv2.circle(birds_img, warp_point(vehicle_front, M), 2, [0, 0, 255], 5)
@@ -699,6 +700,7 @@ def detect(calibration_points):
             # Save results (image with detections)
             # Print time (inference)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
+            '''
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, img_det)
@@ -724,66 +726,66 @@ def detect(calibration_points):
 
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_det)
+                '''
 
-
-                ret, frame = camera.read()
-                key_input = cv2.waitKey(1)
-                kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
-                if Outcomes.ARE_EYES_CLOSED:
-                    SPANKO_COUNTER=SPANKO_COUNTER+1
-                    cv2.putText(img_det, "eyes closed", (30, 300),
+            ret, frame = camera.read()
+            key_input = cv2.waitKey(1)
+            kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
+            if Outcomes.ARE_EYES_CLOSED:
+                SPANKO_COUNTER=SPANKO_COUNTER+1
+                cv2.putText(img_det, "eyes closed", (30, 300),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [125, 246, 55], thickness=1)
+            else:
+                SPANKO_COUNTER=0
+            if SPANKO_COUNTER>3:
+                cv2.putText(img_det, "!!!WSTAWAJ!!!", (300, 30),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                            1, [125, 246, 55], thickness=1)
-                else:
-                    SPANKO_COUNTER=0
-                if SPANKO_COUNTER>3:
-                    cv2.putText(img_det, "!!!SPANKO ALARM!!!", (300, 30),
+                            2, [0, 0, 255], thickness=2)
+            if Outcomes.HEAD_POSITION == "Down":
+                cv2.putText(img_det, "PATRZ W GORE!", (300, 50),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            1, [0, 0, 255], thickness=2)
+            if Outcomes.ARE_HANDS_CLOSE:
+                TELEFON_COUNTER = TELEFON_COUNTER+1
+            else:
+                TELEFON_COUNTER = 0
+            if TELEFON_COUNTER >5:
+                    cv2.putText(img_det, "ODLOZ TELEFON!", (300, 100),
                                 cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                2, [0, 0, 255], thickness=2)
-                if Outcomes.HEAD_POSITION == "Down":
-                    cv2.putText(img_det, "PATRZ W GORE!", (300, 50),
+                                1, [0,0, 255], thickness=1)
+
+            if ZMIANA_PASA_PRAWY:
+                if Outcomes.HEAD_POSITION == "Left" or Outcomes.LOOKING_DIRECTION =="Left":
+                    cv2.putText(img_det, "PATRZ W PRAWO!", (300, 50),
                                 cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                1, [0, 0, 255], thickness=2)
-                if Outcomes.ARE_HANDS_CLOSE:
-                    TELEFON_COUNTER = TELEFON_COUNTER+1
-                else:
-                    TELEFON_COUNTER = 0
-                if TELEFON_COUNTER >5:
-                        cv2.putText(img_det, "ODLOZ TELEFON!", (300, 100),
-                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                    1, [0,0, 255], thickness=1)
+                                1, [0,0, 255], thickness=1)
 
-                if ZMIANA_PASA_PRAWY:
-                    if Outcomes.HEAD_POSITION == "Left" or Outcomes.LOOKING_DIRECTION =="Left":
-                        cv2.putText(img_det, "PATRZ W PRAWO!", (300, 50),
-                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                    1, [0,0, 255], thickness=1)
+            if ZMIANA_PASA_LEWY:
+                if Outcomes.HEAD_POSITION == "Right" or Outcomes.LOOKING_DIRECTION =="Right":
+                    cv2.putText(img_det, "PATRZ W LEWO!", (300, 50),
+                                cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                1, [0,0, 255], thickness=1)
 
-                if ZMIANA_PASA_LEWY:
-                    if Outcomes.HEAD_POSITION == "Right" or Outcomes.LOOKING_DIRECTION =="Right":
-                        cv2.putText(img_det, "PATRZ W LEWO!", (300, 50),
-                                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                    1, [0,0, 255], thickness=1)
+            cv2.putText(img_det, ("Facing " + str( Outcomes.HEAD_POSITION)), (30, 400),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [125, 246, 55], thickness=1)
 
-                cv2.putText(img_det, ("Facing " + str( Outcomes.HEAD_POSITION)), (30, 400),
-                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                            1, [125, 246, 55], thickness=1)
-
-                cv2.putText(img_det, (str("looking " + Outcomes.LOOKING_DIRECTION)), (30, 350),
-                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                            1, [125, 246, 55], thickness=1)
+            cv2.putText(img_det, (str("looking " + Outcomes.LOOKING_DIRECTION)), (30, 350),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [125, 246, 55], thickness=1)
 
 
-                dt = time.time()-frame_start_time
-                fraps = 1/dt
-                cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
-                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                            1, [125, 246, 55], thickness=1)
-                #print(fps)
-                cv2.imshow("lanes", img_det)
-                cv2.waitKey(1)
-                #cv2.imshow("lanes", birds_img )
-                #cv2.waitKey(1)
+            dt = time.time()-frame_start_time
+            fraps = 1/dt
+            cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [125, 246, 55], thickness=1)
+            #print(fps)
+            cv2.imshow("lanes", img_det)
+            cv2.waitKey(1)
+            #cv2.imshow("lanes", birds_img )
+            #cv2.waitKey(1)
 
 
     inf_time.update(t2-t1,img.size(0))
@@ -795,7 +797,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/s7'
+    test_path = 'inference/s7_720'
     calibration_points = []
     calibrate = 1
     approximation = 1

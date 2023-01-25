@@ -87,56 +87,19 @@ class FaceAnalysing(MediaPipeAnalysing):
             Counters.CLOSED_EYES_COUNTER = 0
             return False
 
-    # def detect_sleeping(eyes_ratio, closed_eyes_counter, is_sleeping, is_closed, total_blinks, total_closings):
-    #     if eyes_ratio < EYES_RATIO_FACTOR:  # komentarz, okej?!
-    #         closed_eyes_counter += 1
-    #         # cv.putText(frame, 'Blink', (200, 50), FONTS, 1.3, utils.PINK, 2)
-    #         # utils.colorBackgroundText(frame, f'Closed eyes for: {closed_eyes_counter}', FONTS, 1.7,
-    #         #                           (int(frame_height / 2), 100), 2, utils.YELLOW, pad_x=6, pad_y=6)
-    #         if closed_eyes_counter > CLOSED_EYES_FRAME:
-    #             is_closed = True
-    #         if closed_eyes_counter > 3 * CLOSED_EYES_FRAME:
-    #             is_sleeping = True
-    #             utils.colorBackgroundText(frame, f'SLEEP ALERT', FONTS, 1.7,
-    #                                       (int(frame_height / 2), 500), 3, utils.RED, pad_x=6, pad_y=6)
-    #     else:
-    #         if is_sleeping:
-    #             is_sleeping = False
-    #             closed_eyes_counter = 0
-    #
-    #         if is_closed:
-    #             is_closed = False
-    #             total_closings += 1
-    #
-    #         elif BLINKED_EYES_FRAME < closed_eyes_counter < CLOSED_EYES_FRAME:
-    #             total_blinks += 1
-    #             closed_eyes_counter = 0
-    #
-    #     return closed_eyes_counter, is_sleeping, is_closed, total_blinks, total_closings
-
     def estimate_eye_position(self, eye_iris_indices, eye_mesh_indices, draw=False):
         eye_pupil_center = self.get_average_point(eye_iris_indices)
+        eye_center = self.get_average_point(eye_mesh_indices)
 
         eye_left_border = self.landmarks_coords[eye_mesh_indices[0]]
         eye_right_border = self.landmarks_coords[eye_mesh_indices[8]]
         eye_top_border = self.landmarks_coords[eye_mesh_indices[-1]]
         eye_bottom_border = self.landmarks_coords[eye_mesh_indices[-2]]
 
-        horizontal_eye_distance = abs(eye_left_border[0] + eye_right_border[0])
-        vertical_eye_distance = abs(eye_top_border[1] + eye_bottom_border[1])
+        h_pupil_distance = eye_center[0] - eye_pupil_center[0]
+        v_pupil_distance = eye_center[1] - eye_pupil_center[1]
 
-        center_left_distance = round(eye_left_border[0] - eye_pupil_center[0])
-        center_right_distance = round(eye_right_border[0] - eye_pupil_center[0])
-        center_top_distance = round(eye_top_border[1] - eye_pupil_center[1])
-        center_bottom_distance = round(eye_bottom_border[1] - eye_pupil_center[1])
-
-        horizontal_pupil_distance = center_left_distance + center_right_distance
-        vertical_pupil_distance = center_top_distance + center_bottom_distance
-
-        horizontal_ratio = 100 * horizontal_pupil_distance / horizontal_eye_distance
-        vertical_ratio = 100 * vertical_pupil_distance / vertical_eye_distance
-
-        pupil_direction_ratio = [horizontal_ratio, vertical_ratio]
+        pupil_direction_ratio = [h_pupil_distance, v_pupil_distance]
 
         if draw:
             cv2.circle(self.img, eye_left_border, 2, (0, 0, 255), -1)
@@ -144,23 +107,23 @@ class FaceAnalysing(MediaPipeAnalysing):
             cv2.circle(self.img, eye_top_border, 2, (0, 0, 255), -1)
             cv2.circle(self.img, eye_bottom_border, 2, (0, 0, 255), -1)
 
-            eye_center = self.get_average_point([eye_mesh_indices[0], eye_mesh_indices[8], eye_mesh_indices[-1], eye_mesh_indices[-2]])
+            eye_center = self.get_average_point(eye_mesh_indices)
             cv2.circle(self.img, eye_pupil_center, 4, (0, 0, 255), -1)
             cv2.circle(self.img, eye_center, 4, (0, 255, 0), -1)
             cv2.line(self.img, eye_center, eye_pupil_center, (0, 255, 255), 3)
         return pupil_direction_ratio
 
     def get_looking_direction(self):
-        horizontal_ratio = self.looking_direction[0]
-        vertical_ratio = self.looking_direction[1]
+        h_ratio = self.looking_direction[0]
+        v_ratio = self.looking_direction[1]
 
-        if horizontal_ratio < -Factors.HORIZONTAL_THRESHOLD:
+        if h_ratio < Factors.PUPIL_LEFT_THRESHOLD:
             looking_direction = "Left"
-        elif horizontal_ratio > Factors.HORIZONTAL_THRESHOLD:
+        elif h_ratio > Factors.PUPIL_RIGHT_THRESHOLD:
             looking_direction = "Right"
-        elif vertical_ratio > Factors.VERTICAL_THRESHOLD:
+        elif v_ratio > Factors.PUPIL_UP_THRESHOLD:
             looking_direction = "Up"
-        elif vertical_ratio < -Factors.VERTICAL_THRESHOLD:
+        elif v_ratio < Factors.PUPIL_DOWN_THRESHOLD:
             looking_direction = "Down"
         else:
             looking_direction = "Forward"
@@ -221,16 +184,13 @@ class FaceAnalysing(MediaPipeAnalysing):
         return position
 
     def get_head_position(self):
-        dir_threshold = Factors.HEAD_DIRECTION_THRESHOLD
-
-        # See where the user's head tilting
-        if self.head_angles[1] > dir_threshold:
+        if self.head_angles[1] > Factors.HEAD_LEFT_THRESHOLD:
             direction = "Left"
-        elif self.head_angles[1] < -dir_threshold:
+        elif self.head_angles[1] < Factors.HEAD_RIGHT_THRESHOLD:
             direction = "Right"
-        elif self.head_angles[0] < -dir_threshold:
+        elif self.head_angles[0] < Factors.HEAD_DOWN_THRESHOLD:
             direction = "Down"
-        elif self.head_angles[0] > dir_threshold:
+        elif self.head_angles[0] > Factors.HEAD_UP_THRESHOLD:
             direction = "Up"
         else:
             direction = "Forward"
@@ -253,27 +213,31 @@ class FaceAnalysing(MediaPipeAnalysing):
         Outcomes.ARE_EYES_CLOSED = self.get_eyes_state()
         self.eyes_ratio = round(self.eyes_ratio, 2)
         Outcomes.EYES_RATIO = []
+        Outcomes.EYES_RATIO.append(self.eyes_ratio)
 
         angles = Outcomes.HEAD_POSITION_ANGLES
         self.head_angles = list(map(lambda *x: sum(x) / len(angles), *angles))
         Outcomes.HEAD_POSITION = self.get_head_position()
         self.head_angles = [round(x, 1) for x in self.head_angles]
         Outcomes.HEAD_POSITION_ANGLES = []
+        Outcomes.HEAD_POSITION_ANGLES.append(self.head_angles)
 
         directions = Outcomes.PUPILS_DIRECTION_RATIO
         self.looking_direction = list(map(lambda *x: sum(x) / len(directions), *directions))
         Outcomes.LOOKING_DIRECTION = self.get_looking_direction()
         self.looking_direction = [round(x, 1) for x in self.looking_direction]
         Outcomes.PUPILS_DIRECTION_RATIO = []
+        Outcomes.PUPILS_DIRECTION_RATIO.append(self.looking_direction)
 
         self.lips_ratio = sum(Outcomes.MOUTH_RATIO) / len(Outcomes.MOUTH_RATIO)
         Outcomes.IS_YAWNING = self.detect_yawning()
         self.lips_ratio = round(self.lips_ratio, 2)
         Outcomes.MOUTH_RATIO = []
+        Outcomes.MOUTH_RATIO.append(self.lips_ratio)
 
     def draw_indicators(self, objects):
         height = 150
-        f_width = round(1550 / 2100 * self.frame_width)
+        f_width = round(1200 / 2100 * self.frame_width)
         f_height = round(1000 / 1181 * self.frame_height)
         font_scale = self.frame_width / 2100 * 1.5
 
@@ -327,7 +291,8 @@ class FaceAnalysing(MediaPipeAnalysing):
                                       Factors.FONTS, font_scale,
                                       (f_width, f_height + height), 2, utils.BLACK, color)
             utils.colorBackgroundText(self.img,
-                                      f'Threshold: {Factors.HORIZONTAL_THRESHOLD}|{Factors.VERTICAL_THRESHOLD}',
+                                      f'Threshold: {Factors.PUPIL_LEFT_THRESHOLD}|{Factors.PUPIL_RIGHT_THRESHOLD}|'
+                                      f'{Factors.PUPIL_UP_THRESHOLD}|{Factors.PUPIL_DOWN_THRESHOLD}',
                                       Factors.FONTS, font_scale,
                                       (f_width, f_height + 50 + height), 2, utils.BLACK, utils.WHITE)
 
@@ -349,27 +314,29 @@ class FaceAnalysing(MediaPipeAnalysing):
             height -= 150
             self.estimate_head_position_angles(True)
 
-            if Outcomes.HEAD_POSITION == 'Facing Right':
+            if Outcomes.HEAD_POSITION == 'Right':
                 color = utils.YELLOW
                 pos = 'R|'
-            elif Outcomes.HEAD_POSITION == 'Facing Left':
+            elif Outcomes.HEAD_POSITION == 'Left':
                 color = utils.ORANGE
                 pos = 'L|'
-            elif Outcomes.HEAD_POSITION == 'Facing Up':
+            elif Outcomes.HEAD_POSITION == 'Up':
                 color = utils.BLUE
                 pos = 'U|'
-            elif Outcomes.HEAD_POSITION == 'Facing Down':
+            elif Outcomes.HEAD_POSITION == 'Down':
                 color = utils.PURPLE
                 pos = 'D|'
             else:
                 color = utils.WHITE
                 pos = ''
 
-            utils.colorBackgroundText(self.img, f'Head pos.: {pos}{self.head_angles[0]}|{self.head_angles[1]}',
-                                      Factors.FONTS, font_scale,
-                                      (f_width, f_height + height), 2, utils.BLACK, color)
-            utils.colorBackgroundText(self.img, f'Threshold: {Factors.HEAD_DIRECTION_THRESHOLD}', Factors.FONTS,
-                                      font_scale,
-                                      (f_width, f_height + 50 + height), 2, utils.BLACK, utils.WHITE)
+            utils.colorBackgroundText(self.img, f'Head pos.: {pos}{self.head_angles[1]}|{self.head_angles[0]}',
+                                      Factors.FONTS, font_scale, (f_width, f_height + height), 2, utils.BLACK, color)
+            utils.colorBackgroundText(self.img,
+                                      f'Threshold:'
+                                      f'{Factors.HEAD_LEFT_THRESHOLD}|{Factors.HEAD_RIGHT_THRESHOLD}|'
+                                      f'{Factors.HEAD_UP_THRESHOLD}|{Factors.HEAD_DOWN_THRESHOLD}',
+                                      Factors.FONTS, font_scale, (f_width, f_height + 50 + height), 2, utils.BLACK,
+                                      utils.WHITE)
 
         return self.img

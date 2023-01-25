@@ -16,52 +16,55 @@ class PoseAnalysing(MediaPipeAnalysing):
         left_hand_indices = Indices.LEFT_HAND
         right_hand_indices = Indices.RIGHT_HAND
 
-        coords = [(int(point.x * self.frame_width), int(point.y * self.frame_height), int(point.z * self.frame_width))
+        coords = [(int(point.x * self.frame_width), int(point.y * self.frame_height))
                   for point in
                   self.results.pose_landmarks.landmark]
 
-
-        left_hand_point = self.get_average_3d_point(left_hand_indices, coords)
-        right_hand_point = self.get_average_3d_point(right_hand_indices, coords)
+        left_hand_point = self.get_average_point(left_hand_indices)
+        right_hand_point = self.get_average_point(right_hand_indices)
 
         left_ear_point = coords[7]  # Left ear
         right_ear_point = coords[8]  # Right ear
+        mouth_point = self.get_average_point([Indices.MOUTH[0], Indices.MOUTH[1]])
+        nose_point = self.get_average_point([0])
 
-        ear2ear = self.get_euclidean_3d_distance(left_ear_point, right_ear_point)
+        left_ear2nose = self.get_euclidean_distance(left_ear_point, nose_point)
+        right_ear2nose = self.get_euclidean_distance(right_ear_point, nose_point)
+        ear2nose = (left_ear2nose + right_ear2nose) / 2
 
-        ll_distance = self.get_euclidean_3d_distance(left_hand_point, left_ear_point)
-        rr_distance = self.get_euclidean_3d_distance(right_hand_point, right_ear_point)
-        lr_distance = self.get_euclidean_3d_distance(left_hand_point, right_ear_point)
-        rl_distance = self.get_euclidean_3d_distance(right_hand_point, left_ear_point)
+        ll_distance = self.get_euclidean_distance(left_hand_point, left_ear_point)
+        rr_distance = self.get_euclidean_distance(right_hand_point, right_ear_point)
+        lr_distance = self.get_euclidean_distance(left_hand_point, right_ear_point)
+        rl_distance = self.get_euclidean_distance(right_hand_point, left_ear_point)
 
-        hand_face_distance_ratios = [ll_distance / ear2ear, rr_distance / ear2ear, lr_distance / ear2ear,
-                                     rl_distance / ear2ear]
+        lm_distance = self.get_euclidean_distance(left_hand_point, mouth_point)
+        rm_distance = self.get_euclidean_distance(right_hand_point, mouth_point)
+
+        hand_face_distance_ratios = [ll_distance / ear2nose, lr_distance / ear2nose, rr_distance / ear2nose,
+                                     rl_distance / ear2nose]  # lm_distance / ear2nose, rm_distance / ear2nose]
+
         if draw:
             cv2.circle(self.img, left_hand_point[:2], 4, utils.YELLOW, 8)
             cv2.circle(self.img, right_hand_point[:2], 4, utils.ORANGE, -1)
             cv2.circle(self.img, left_ear_point[:2], 4, utils.MAGENTA, -1)
             cv2.circle(self.img, right_ear_point[:2], 4, utils.PINK, -1)
+            cv2.circle(self.img, mouth_point[:2], 4, utils.RED, -1)
+            cv2.circle(self.img, nose_point[:2], 4, utils.RED, -1)
 
             cv2.line(self.img, left_hand_point[:2], left_ear_point[:2], utils.YELLOW, 2)
             cv2.line(self.img, right_hand_point[:2], right_ear_point[:2], utils.ORANGE, 2)
             cv2.line(self.img, left_hand_point[:2], right_ear_point[:2], utils.MAGENTA, 2)
             cv2.line(self.img, right_hand_point[:2], left_ear_point[:2], utils.PINK, 2)
+            cv2.line(self.img, right_hand_point[:2], mouth_point[:2], utils.GRAY, 2)
+            cv2.line(self.img, left_hand_point[:2], mouth_point[:2], utils.GRAY, 2)
 
         return hand_face_distance_ratios
 
     def get_hand_face_position(self):
         ratios = self.hands_face_ratio
-        Outcomes.ARE_HANDS_CLOSE = True
-        if min(ratios) < Factors.HAND_FACE_DISTANCE_FACTOR:
+        if min(ratios[:4]) < Factors.HAND_FACE_DISTANCE_FACTOR:
             hand_face = "Hand is too close to the ear"
-        # if ratios[0] < Factors.HAND_FACE_DISTANCE_FACTOR:
-        #     hand_face = 'Left hand is too close to left ear'
-        # elif ratios[1] < Factors.HAND_FACE_DISTANCE_FACTOR:
-        #     hand_face = 'Right hand is too close to right ear'
-        # elif ratios[2] < Factors.HAND_FACE_DISTANCE_FACTOR:
-        #     hand_face = 'Left hand is too close to right ear'
-        # elif ratios[3] < Factors.HAND_FACE_DISTANCE_FACTOR:
-        #     hand_face = 'Right hand is too close to left ear'
+            Outcomes.ARE_HANDS_CLOSE = True
         else:
             hand_face = "It's okay"
             Outcomes.ARE_HANDS_CLOSE = False
@@ -77,20 +80,7 @@ class PoseAnalysing(MediaPipeAnalysing):
         Outcomes.HAND_FACE_RELATION = self.get_hand_face_position()
         self.hands_face_ratio = [round(x, 1) for x in self.hands_face_ratio]
         Outcomes.HANDS_FACE_RATIO = []
-
-    # def estimate_head_orientation2(self): TODO nie wiem czy to ma sens, zbyt proste, może nie działać w wielu sytuacjach
-    #     left_eye_point = self.landmarks_coords[Indices.HOL_LEFT_EYE[1]]
-    #     right_eye_point = self.landmarks_coords[Indices.HOL_RIGHT_EYE[1]]
-    #     left_shoulder_point = self.landmarks_coords[Indices.LEFT_SHOULDER[0]]
-    #     right_shoulder_point = self.landmarks_coords[Indices.RIGHT_SHOULDER[0]]
-    #
-    #     lr_distance = self.get_euclidean_distance(left_eye_point, right_shoulder_point)
-    #     rl_distance = self.get_euclidean_distance(right_eye_point, left_shoulder_point)
-    #     self.img = cv2.circle(self.img, left_eye_point, 2, (255, 255, 255), -1)
-    #     shoulder_distance = self.get_euclidean_distance(left_shoulder_point, right_shoulder_point)
-    #
-    #
-    #     print(shoulder_distance)
+        Outcomes.HANDS_FACE_RATIO.append(self.hands_face_ratio)
 
     def draw_indicators(self, objects, frame):
         height = 150
@@ -100,12 +90,12 @@ class PoseAnalysing(MediaPipeAnalysing):
 
         if 'pose mesh' in objects:
             mp_drawing = mp.solutions.drawing_utils
-            holistic = mp.solutions.holistic
+            mp_pose = mp.solutions.pose
             draw_spec = mp_drawing.DrawingSpec(thickness=3, circle_radius=1,
                                                color=(150, 0, 0))  # color=(100, 100, 100))
 
             if self.results.pose_landmarks:
-                mp_drawing.draw_landmarks(frame, self.results.pose_landmarks, holistic.POSE_CONNECTIONS, draw_spec,
+                mp_drawing.draw_landmarks(frame, self.results.pose_landmarks, mp_pose.POSE_CONNECTIONS, draw_spec,
                                           draw_spec)
 
         if 'hands' in objects:
@@ -119,12 +109,12 @@ class PoseAnalysing(MediaPipeAnalysing):
                 pos = ''
                 color = utils.WHITE
 
-            utils.colorBackgroundText(frame,
-                                      f'Hand-Face dist.: {pos}{self.hands_face_ratio[0]}|'
-                                      f'{self.hands_face_ratio[1]}|{self.hands_face_ratio[2]}|{self.hands_face_ratio[3]}',
+            utils.colorBackgroundText(frame, f'Hand-Face dist.: {pos}{self.hands_face_ratio[0]}|'
+                                             f'{self.hands_face_ratio[1]}|{self.hands_face_ratio[2]}|'
+                                             f'{self.hands_face_ratio[3]}',
                                       Factors.FONTS, font_scale, (f_width, f_height + height), 2, utils.BLACK, color)
+
             utils.colorBackgroundText(frame, f'Threshold: {Factors.HAND_FACE_DISTANCE_FACTOR}', Factors.FONTS,
-                                      font_scale,
-                                      (f_width, f_height + 50 + height), 2, utils.BLACK, utils.WHITE)
+                                      font_scale, (f_width, f_height + 50 + height), 2, utils.BLACK, utils.WHITE)
 
         return frame

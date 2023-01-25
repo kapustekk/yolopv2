@@ -41,20 +41,38 @@ class Indices:
 
 class Factors:
     EYES_RATIO_FACTOR = 0.25  # 35+ to już na maksa otwarte mniej więcej
-    LIPS_RATIO_FACTOR = 0.3
-    HAND_FACE_DISTANCE_FACTOR = 4.5
-    HAND_FACE_THRESHOLD_TIME = 30
-    CLOSED_EYES_FRAME = 14
-    BLINKED_EYES_FRAME = 2
+    LIPS_RATIO_FACTOR = 0.55
+    HAND_FACE_DISTANCE_FACTOR = 2.4
+    # HAND_FACE_THRESHOLD_TIME = 30
+    # CLOSED_EYES_FRAME = 14
+    # BLINKED_EYES_FRAME = 2
     OPENED_MOUTH_FRAME = 10
-    HORIZONTAL_THRESHOLD = 1
-    VERTICAL_THRESHOLD = 2
-    HEAD_DIRECTION_THRESHOLD = 6
+
+    PUPIL_LEFT_THRESHOLD = -5.5
+    PUPIL_RIGHT_THRESHOLD = 7.5
+    PUPIL_UP_THRESHOLD = 4
+    PUPIL_DOWN_THRESHOLD = 0.6
+
+    HEAD_HORIZONTAL_THRESHOLD = 6
+    HEAD_VERTICAL_THRESHOLD = 6  # Głowa ma kierunki na odwrót!!! Teraz jest dobrze
+
+    HEAD_LEFT_THRESHOLD = -0.5
+    HEAD_RIGHT_THRESHOLD = -8.5
+    HEAD_UP_THRESHOLD = 7.8
+    HEAD_DOWN_THRESHOLD = 4.4
+
+    # Keys control
+    CONF_MODE = False
+    SET_THRESHOLD = False
+    SET_THRESHOLD_UP = False
+    SET_THRESHOLD_DOWN = False
+    SET_THRESHOLD_LEFT = False
+    SET_THRESHOLD_RIGHT = False
+
     AVERAGING_FACTOR = 1
+    OPTIMIZATION_FACTOR = 1
 
     FONTS = cv2.FONT_HERSHEY_COMPLEX
-
-    OPTIMIZATION_FACTOR = 1
 
 
 class Counters:
@@ -74,29 +92,37 @@ class Outcomes:
 
     MOUTH_RATIO = []
     IS_MOUTH_OPEN = False
+    IS_YAWNING = False
 
     HANDS_FACE_RATIO = []
-    HAND_FACE_RELATION = False
+    HAND_FACE_RELATION = ''
     ARE_HANDS_CLOSE = False
 
     PUPILS_DIRECTION_RATIO = []
-    LOOKING_DIRECTION = ''#Lelft Right Up Down
+    LOOKING_DIRECTION = ''
 
     HEAD_POSITION_ANGLES = []
-    HEAD_POSITION = ''#Left Right Up Down
+    HEAD_POSITION = ''
 
     SHOW_INDICATORS = False
-    OBJECTS = []
+    ON_SCREEN = []
 
 
 KEYS = {
-    49: "add_remove(Outcomes.OBJECTS,'face mesh')",     # key '1'
-    50: "add_remove(Outcomes.OBJECTS,'eyes')",          # key '2'
-    51: "add_remove(Outcomes.OBJECTS,'pupils')",        # key '3'
-    52: "add_remove(Outcomes.OBJECTS,'lips')",          # key '4'
-    53: "add_remove(Outcomes.OBJECTS,'head')",          # key '5'
-    54: "add_remove(Outcomes.OBJECTS,'pose mesh')",     # key '6'
-    55: "add_remove(Outcomes.OBJECTS,'hands')",         # key '7'
-    56: "cv2.imwrite('wynik2.jpg', frame)",             # key '8'
-    27: "sys.exit()"                                    # key 'esc'
+    49: "add_remove(Outcomes.ON_SCREEN,'face mesh')",  # key '1'
+    50: "add_remove(Outcomes.ON_SCREEN,'eyes')",  # key '2'
+    51: "add_remove(Outcomes.ON_SCREEN,'pupils')",  # key '3'
+    52: "add_remove(Outcomes.ON_SCREEN,'lips')",  # key '4'
+    53: "add_remove(Outcomes.ON_SCREEN,'head')",  # key '5'
+    54: "add_remove(Outcomes.ON_SCREEN,'pose mesh')",  # key '6'
+    55: "add_remove(Outcomes.ON_SCREEN,'hands')",  # key '7'
+    56: "cv2.imwrite('wynik2.jpg', frame)",  # key '8'
+    99: "Factors.CONF_MODE = not Factors.CONF_MODE", # key 'c'
+    8: "Outcomes.ON_SCREEN = []", # key 'Backspace'
+    # 32: "Factors.SET_THRESHOLD = True",
+    # 117: "Factors.SET_THRESHOLD_UP = True",  # u UP
+    # 100: "Factors.SET_THRESHOLD_DOWN = True",  # d DOWN
+    # 108: "Factors.SET_THRESHOLD_LEFT = True",  # l LEFT
+    # 114: "Factors.SET_THRESHOLD_RIGHT = True",  # r RIGHT
+    27: "sys.exit()"  # key 'esc'
 }

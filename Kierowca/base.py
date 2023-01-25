@@ -17,15 +17,14 @@ class MediaPipeAnalysing:
     def get_mesh(self):
         if self.solution == 'Face':
             mesh = mp.solutions.face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5,
-                                                   refine_landmarks=True)
+                                                   refine_landmarks=True, max_num_faces=1)
         elif self.solution == 'Pose':
-            mesh = mp.solutions.holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+            mesh = mp.solutions.pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
         else:
             mesh = None
         return mesh
 
     def get_results(self):
-        # self.img = cv2.resize(self.img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
         frame_height, frame_width = self.img.shape[:2]
         rgb_frame = cv2.cvtColor(self.img, cv2.COLOR_RGB2BGR)
         results = self.mesh.process(rgb_frame)
@@ -59,29 +58,10 @@ class MediaPipeAnalysing:
         average_coords = [round(x / len(indices)), round(y / len(indices))]
         return average_coords
 
-    #@staticmethod
-    def get_average_3d_point(self, indices, coords):
-        x, y, z = 0, 0, 0
-        #print(type(coords[0]))
-        for point in indices:
-            #print(point)
-            x += coords[point][0]
-            y += coords[point][1]
-            z += coords[point][2]
-
-        average_coords = [round(x / len(indices)), round(y / len(indices)), round(z / len(indices))]
-        return average_coords
 
     @staticmethod
     def get_euclidean_distance(point1, point2):
         x, y = point1
         x1, y1 = point2
         distance = math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2)
-        return distance
-
-    @staticmethod
-    def get_euclidean_3d_distance(point1, point2):
-        x, y, z = point1
-        x1, y1, z1 = point2
-        distance = math.sqrt((x1 - x) ** 2 + (y1 - y) ** 2 + (z1 - z) ** 2)
         return distance
