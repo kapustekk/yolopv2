@@ -699,6 +699,7 @@ def detect(calibration_points):
             #            1, [0, 0, 255], thickness=2)
             # Save results (image with detections)
             # Print time (inference)
+            t_seg = time.time()
             print(f'{s}Done. ({t2 - t1:.3f}s)')
             '''
             if save_img:
@@ -777,8 +778,14 @@ def detect(calibration_points):
 
 
             dt = time.time()-frame_start_time
+            dt_fraps_only_lanes = t_seg-frame_start_time
+            fraps_only_lanes = 1/dt_fraps_only_lanes
             fraps = 1/dt
             cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
+                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        1, [125, 246, 55], thickness=1)
+
+            cv2.putText(img_det, ("same pasy:" +str(round(fraps_only_lanes, 1))+ " fps"), (width - 250, 60),
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [125, 246, 55], thickness=1)
             #print(fps)
