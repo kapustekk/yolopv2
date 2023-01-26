@@ -14,8 +14,6 @@ from Kierowca.face import FaceAnalysing
 from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
 from tools.ImageWrapping import warp_image_to_birdseye_view, warp_point, get_warp_perspective, calculate_distance_between_points, estimate_real_distance
-import playsound
-
 import winsound
 
 # Conclude setting / general reprocessing / plots / metrices / datasets
