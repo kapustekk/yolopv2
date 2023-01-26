@@ -14,6 +14,9 @@ from Kierowca.face import FaceAnalysing
 from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
 from tools.ImageWrapping import warp_image_to_birdseye_view, warp_point, get_warp_perspective, calculate_distance_between_points, estimate_real_distance
+import playsound
+
+import winsound
 
 # Conclude setting / general reprocessing / plots / metrices / datasets
 from utils.utils import \
@@ -732,6 +735,11 @@ def detect(calibration_points):
             ret, frame = camera.read()
             key_input = cv2.waitKey(1)
             kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
+            diego = False
+
+            if SPANKO_COUNTER > 15 and not Outcomes.ARE_EYES_CLOSED:
+                diego = True
+
             if Outcomes.ARE_EYES_CLOSED:
                 SPANKO_COUNTER=SPANKO_COUNTER+1
                 cv2.putText(img_det, "eyes closed", (30, 300),
@@ -739,14 +747,27 @@ def detect(calibration_points):
                         1, [125, 246, 55], thickness=1)
             else:
                 SPANKO_COUNTER=0
-            if SPANKO_COUNTER>3:
+
+
+            if SPANKO_COUNTER>3 or PATRZENIE_W_DOL_COUNTER>3:
+                winsound.PlaySound("budzik.wav", winsound.SND_ASYNC | winsound.SND_ALIAS)
                 cv2.putText(img_det, "!!!WSTAWAJ!!!", (300, 30),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL,
                             2, [0, 0, 255], thickness=2)
+            if PATRZENIE_W_DOL_COUNTER>15 and Outcomes.HEAD_POSITION != "Down":
+                diego = True
+
+            if diego:
+                winsound.PlaySound("hej_diego.wav", winsound.SND_ASYNC | winsound.SND_ALIAS)
             if Outcomes.HEAD_POSITION == "Down":
+                PATRZENIE_W_DOL_COUNTER += 1
                 cv2.putText(img_det, "PATRZ W GORE!", (300, 50),
                             cv2.FONT_HERSHEY_COMPLEX_SMALL,
                             1, [0, 0, 255], thickness=2)
+            else:
+                PATRZENIE_W_DOL_COUNTER = 0
+
+
             if Outcomes.ARE_HANDS_CLOSE:
                 TELEFON_COUNTER = TELEFON_COUNTER+1
             else:
