@@ -447,6 +447,7 @@ def detect(calibration_points):
     threshold = math.sqrt(width*height)//divide
 
     if len(calibration_points)>0:
+
         bottom_horizon = calibration_points[4]
         upper_horizon = calibration_points[5]  # gorny horyzont - pikselowo mniejsza wartość!
         D = bottom_horizon[1] - upper_horizon[1]
@@ -456,8 +457,8 @@ def detect(calibration_points):
         img_middle = optic_middle
         number_of_segments = calibration_points[6][0]
 
-        y_conv = int(height / 60)  # height/60 to 1m dla 720p: 12pikseli po y = 1m
-        x_conv = int(height / 15)  # height/15 to 1 m, dla 720p 3piksele po x = 1m
+        y_conv = int(height / 60)  # height/60 to 1m dla 720p: 12 pikseli po y = 1m
+        x_conv = int(height / 15)  # height/15 to 1 m, dla 720p 48 pikseli po x = 1m
         M, Minv = get_warp_perspective(calibration_points, x_conv, y_conv,number_of_segments)
         # optic_middle_upper_warp = warp_point(optic_middle_upper, M)
     else:
@@ -597,6 +598,13 @@ def detect(calibration_points):
             if len(calibration_points) > 0:
                 ZMIANA_PASA_LEWY,ZMIANA_PASA_PRAWY = position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
                                  M)  # polozenie na pasie
+
+                #birds_img = warp_image_to_birdseye_view(img_det_copy, M)
+                #print("birds")
+                #cv2.imshow("birds", birds_img)
+                #cv2.waitKey(1)
+                #cv2.circle(birds_img, warp_point(vehicle_front, M), 2, [0, 0, 255], 5)
+
             #im0 = im0.astype(np.uint8)
             found_cars_points = []
             if len(det):
@@ -629,11 +637,7 @@ def detect(calibration_points):
                         plot_one_box(xyxy, img_det, line_thickness=3)
                     '''
                 if len(calibration_points) > 0:
-                    birds_img = warp_image_to_birdseye_view(img_det_copy, M)
-                    cv2.circle(birds_img, warp_point(vehicle_front, M), 2, [0, 0, 255], 5)
 
-                    position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
-                                     M)  # polozenie na pasie
                     # odleglosc od samochodu
                     '''
                     for point in found_cars_points:
@@ -702,7 +706,7 @@ def detect(calibration_points):
             # Print time (inference)
             t_seg = time.time()
             print(f'{s}Done. ({t2 - t1:.3f}s)')
-            '''
+
             if save_img:
                 if dataset.mode == 'image':
                     cv2.imwrite(save_path, img_det)
@@ -728,7 +732,7 @@ def detect(calibration_points):
 
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_det)
-                '''
+
 
             ret, frame = camera.read()
             key_input = cv2.waitKey(1)
@@ -810,8 +814,6 @@ def detect(calibration_points):
             #print(fps)
             cv2.imshow("lanes", img_det)
             cv2.waitKey(1)
-            #cv2.imshow("lanes", birds_img )
-            #cv2.waitKey(1)
 
 
     inf_time.update(t2-t1,img.size(0))
@@ -823,7 +825,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/s7_720'
+    test_path = 'inference/vid2'
     calibration_points = []
     calibrate = 1
     approximation = 1
@@ -833,6 +835,5 @@ if __name__ == '__main__':
 
     if calibrate == 1:
         calibration_points = camera_calibration(opt.source+"/calibration.png", opt.source+"/calibration.txt")
-
     with torch.no_grad():
             detect(calibration_points)
