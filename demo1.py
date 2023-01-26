@@ -827,11 +827,12 @@ if __name__ == '__main__':
     calibration_points = []
     calibrate = 1
     approximation = 1
-    if calibrate == 1:
-        calibration_points = camera_calibration(test_path+"/calibration.png", test_path+"/calibration.txt")
 
     opt =  make_parser(str(test_path)).parse_args()
     print(opt)
+
+    if calibrate == 1:
+        calibration_points = camera_calibration(opt.source+"/calibration.png", opt.source+"/calibration.txt")
 
     with torch.no_grad():
             detect(calibration_points)
