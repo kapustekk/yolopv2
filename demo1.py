@@ -15,6 +15,25 @@ from Kierowca.pose import PoseAnalysing
 from tools.PointsChoosing import camera_calibration, find_optic_middle
 from tools.ImageWrapping import warp_image_to_birdseye_view, warp_point, get_warp_perspective, calculate_distance_between_points, estimate_real_distance
 import winsound
+import glob
+from input import *
+
+
+def calibrate_image(img):
+
+    #img = cv2.imread('95.jpg')
+    h, w = img.shape[:2]
+    newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+    # undistort
+    dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+    # crop the image
+    x, y, w, h = roi
+    dst = dst[y:y + h, x:x + w]
+    dst = cv2.resize(dst,(int(1280), int(720)))
+    #cv2.imshow('calibresult.png', dst)
+    #cv2.imwrite('result.jpg', dst)
+    #cv2.waitKey(1)
+    return dst
 
 # Conclude setting / general reprocessing / plots / metrices / datasets
 from utils.utils import \
@@ -90,6 +109,7 @@ def estimate_speed_towards_car(unique_cars, x_conv,y_conv, M, fps=30):
                     px_dist = calculate_distance_between_points(warp_point(previous_point, M), warp_point(point, M))
                     real_dist = estimate_real_distance(px_dist, x_conv, y_conv)
                     #diagonal_distance = math.sqrt((real_dist[0]**2)+(real_dist[1]**2))
+                    #print(diagonal_distance)
                     distance_list.append(real_dist[1])
                 previous_point = point
             i=0
@@ -391,7 +411,7 @@ def make_parser(test_path):
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.8, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
-    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
@@ -404,13 +424,13 @@ def make_parser(test_path):
 
 
 def detect(calibration_points):
-    TELEFON_COUNTER = 0
-    SPANKO_COUNTER = 0  # Hasta La Vista
-    PATRZENIE_W_DOL_COUNTER = 0
-    kierowca_main.read_thresholds_from_file()
-    face_analyzer = FaceAnalysing()
-    pose_analyzer = PoseAnalysing()
-    camera = cv2.VideoCapture(0)
+    #TELEFON_COUNTER = 0
+    #SPANKO_COUNTER = 0  # Hasta La Vista
+    #PATRZENIE_W_DOL_COUNTER = 0
+    #kierowca_main.read_thresholds_from_file()
+    #face_analyzer = FaceAnalysing()
+    #pose_analyzer = PoseAnalysing()
+    #camera = cv2.VideoCapture(0)
     # setting and directories
     source, weights,  save_txt, imgsz = opt.source, opt.weights,  opt.save_txt, opt.img_size
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
@@ -430,7 +450,7 @@ def detect(calibration_points):
     model = model.to(device)
 
     if half:
-        model.half()  # to FP16  
+        model.half()  # to FP16
     model.eval()
 
     # Set Dataloader
@@ -484,8 +504,10 @@ def detect(calibration_points):
     t0 = time.time()
     for path, img, im0s, vid_cap in dataset:
         frame_start_time = time.time()
+
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
+
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
 
         if img.ndimension() == 3:
@@ -496,8 +518,8 @@ def detect(calibration_points):
         [pred,anchor_grid],seg,ll= model(img)
         t2 = time_synchronized()
 
-        # waste time: the incompatibility of  torch.jit.trace causes extra time consumption in demo version 
-        # but this problem will not appear in offical version 
+        # waste time: the incompatibility of  torch.jit.trace causes extra time consumption in demo version
+        # but this problem will not appear in offical version
         tw1 = time_synchronized()
         pred = split_for_trace_model(pred,anchor_grid)
         tw2 = time_synchronized()
@@ -509,6 +531,7 @@ def detect(calibration_points):
 
         #da_seg_mask = driving_area_mask(seg)
         ll_seg_mask = lane_line_mask(ll)
+
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             ZMIANA_PASA_LEWY=False
@@ -595,9 +618,9 @@ def detect(calibration_points):
 
 
 
-            if len(calibration_points) > 0:
-                ZMIANA_PASA_LEWY,ZMIANA_PASA_PRAWY = position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
-                                 M)  # polozenie na pasie
+            #if len(calibration_points) > 0:
+                #ZMIANA_PASA_LEWY,ZMIANA_PASA_PRAWY = position_on_road(img_det, optic_middle, left_line, right_line, x_conv, y_conv,
+                #                 M)  # polozenie na pasie
 
                 #birds_img = warp_image_to_birdseye_view(img_det_copy, M)
                 #print("birds")
@@ -608,19 +631,21 @@ def detect(calibration_points):
             #im0 = im0.astype(np.uint8)
             found_cars_points = []
             if len(det):
+                #print(len(det))
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], img_det.shape).round()
 
                 # Print results
-                for c in det[:, -1].unique():
-                    n = (det[:, -1] == c).sum()  # detections per class
-                    #s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
-
+                #for c in det[:, -1].unique():
+                #    names = (det[:, -1] == c).sum()  # detections per class
+                #    s += f"{names} {names[int(c)]}{'s' * (names > 1)}, "  # add to string
+                #    print(s)
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
                     #add start
-
-                    plot_one_box(xyxy, img_det, color=[123, 123, 255], line_thickness=2)
+                    #print(xyxy)
+                    #print(xyxy)
+                    plot_one_box(xyxy, img_det, color=[0, 0, 255], line_thickness=2)
                     bottom_y = int(xyxy[3])
                     mid_x = int((xyxy[0] + xyxy[2]) / 2)
                     bottom_middle_point = (mid_x, bottom_y)
@@ -636,6 +661,8 @@ def detect(calibration_points):
                     if save_img :  # Add bbox to image
                         plot_one_box(xyxy, img_det, line_thickness=3)
                     '''
+
+
                 if len(calibration_points) > 0:
 
                     # odleglosc od samochodu
@@ -733,7 +760,7 @@ def detect(calibration_points):
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(img_det)
 
-
+            '''
             ret, frame = camera.read()
             key_input = cv2.waitKey(1)
             kierowca_main.main(ret,frame,pose_analyzer,face_analyzer,key_input)
@@ -799,22 +826,23 @@ def detect(calibration_points):
                         cv2.FONT_HERSHEY_COMPLEX_SMALL,
                         1, [125, 246, 55], thickness=1)
 
-
+            '''
             dt = time.time()-frame_start_time
             dt_fraps_only_lanes = t_seg-frame_start_time
             fraps_only_lanes = 1/dt_fraps_only_lanes
             fraps = 1/dt
-            cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
-                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                        1, [125, 246, 55], thickness=1)
 
-            cv2.putText(img_det, ("same pasy:" +str(round(fraps_only_lanes, 1))+ " fps"), (width - 250, 60),
-                        cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                        1, [125, 246, 55], thickness=1)
-            #print(fps)
+            #cv2.putText(img_det, (str(round(fraps, 1)) + "fps"), (width - 100, 30),
+            #            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+            #            1, [125, 246, 55], thickness=1)
+
+            #cv2.putText(img_det, ("same pasy:" +str(round(fraps_only_lanes, 1))+ " fps"), (width - 250, 60),
+            #            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+            #            1, [125, 246, 55], thickness=1)
+
             cv2.imshow("lanes", img_det)
             cv2.waitKey(1)
-
+            print(fraps)
 
     inf_time.update(t2-t1,img.size(0))
     nms_time.update(t4-t3,img.size(0))
@@ -825,7 +853,7 @@ def detect(calibration_points):
 
 if __name__ == '__main__':
     print(torch.cuda.is_available())
-    test_path = 'inference/vid2'
+    test_path = 'inference/odleglosci'
     calibration_points = []
     calibrate = 1
     approximation = 1

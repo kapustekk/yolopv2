@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 import torch
 import torchvision
+from input import *
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,7 @@ def split_for_trace_model(pred = None, anchor_grid = None):
     pred = torch.cat(z, 1)
     return pred
 
+
 def show_seg_result(img, result, palette=None,is_demo=False):
 
     if palette is None:
@@ -201,8 +203,8 @@ def show_seg_result(img, result, palette=None,is_demo=False):
     else:
         color_area = np.zeros((result[0].shape[0], result[0].shape[1], 3), dtype=np.uint8)
         
-        color_area[result[0] == 1] = [0, 255, 0]
-        color_area[result[1] ==1] = [255, 0, 0]
+        # color_area[result[0] == 1] = [0, 255, 0]
+        color_area[result[1] == 1] = [255, 0, 0]
         color_seg = color_area
 
     # convert to BGR
@@ -453,7 +455,19 @@ class LoadImages:  # for inference
             #print(f'image {self.count}/{self.nf} {path}: ', end='')
 
         # Padded resize
-        img0 = cv2.resize(img0, (1280,720), interpolation=cv2.INTER_LINEAR)
+        img0 = cv2.resize(img0, (1280, 720), interpolation=cv2.INTER_LINEAR)  # ORYGINALNA ZMIANA WIELKOSCI KLATKI
+
+        # TUTAJ USUWAM ZNIEKSZTAŁCENIE PRZEZ REMAPOWANIE(AKURAT TAK MI SIĘ ZROBIŁO)
+        h, w = img0.shape[:2]
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+        map1, map2 = cv2.initUndistortRectifyMap(mtx, dist, None, newcameramtx, (w, h), 5)
+        img0 = cv2.remap(img0, map1, map2, cv2.INTER_LINEAR)  # REMAPOWANIE
+        x, y, w, h = roi  # ZNALEZIENIE OGRANICZEŃ PO REMAPOWANIU(BO POJAWIAJĄ SIĘ CZARNE PASKI NA DOLE I GÓRZE KLATKI)
+        img0 = img0[y:y + h, x:x + w]
+        img0 = cv2.resize(img0, (1280, 720), interpolation=cv2.INTER_LINEAR)  # PONOWNY RESIZE ŻEBY SIECI DOBRZE DZIAŁAŁY
+        # BO SAMO OBCIĘCIE ROBI NAM DO ZA MAŁEJ WIELKOŚCI A POTRZEBUJĄ 1280X720
+        # TO SPRAWIA ŻE OBRAZ WYGLĄDA TROCHĘ DZIWNIE, ALE JEST PO PROSTU PRZYCIĘTE
+
         img = letterbox(img0, self.img_size, stride=self.stride)[0]
 
         # Convert
